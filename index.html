@@ -1,1 +1,971 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sapanboon App (สะพานบุญ)</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Design -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // ธีมพื้นหลังยังคงเป็นโทนส้ม/ทอง แต่ตัวหนังสือจะเป็นสีดำ
+                        orange: { 50: '#fff7ed', 100: '#ffedd5', 500: '#f97316', 600: '#ea580c', 800: '#9a3412', 900: '#7c2d12' },
+                        gold: '#fbbf24',
+                        stone: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 800: '#292524' }
+                    },
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f5f5f4; -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .page-transition { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Fix Leaflet Layers */
+        .leaflet-pane { z-index: 10 !important; }
+        .leaflet-bottom { z-index: 20 !important; }
+        /* Adjust SweetAlert z-index */
+        .swal2-container { z-index: 9999 !important; }
+        
+        /* Force all text to be black/dark as requested */
+        .text-black-force { color: #000000 !important; }
+        
+        /* Highlight required fields */
+        .required-star::after { content: " *"; color: red; }
+    </style>
+</head>
+<body class="text-black antialiased h-screen flex flex-col overflow-hidden">
+
+    <!-- MAIN CONTENT -->
+    <main id="app-content" class="flex-1 overflow-y-auto hide-scrollbar pb-24 relative">
+        
+        <!-- PAGE 1: HOME -->
+        <div id="page-home" class="page-transition min-h-full">
+            <div class="bg-white sticky top-0 z-30 px-6 py-4 shadow-sm rounded-b-[30px]">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <p class="text-xs text-black font-medium">สะพานบุญออนไลน์</p>
+                        <h1 class="text-2xl font-bold text-black">ค้นหางานบุญ & วัด 🙏</h1>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-black font-bold border border-orange-200">
+                        <i class="fa-solid fa-hands-praying"></i>
+                    </div>
+                </div>
+
+                <!-- Search Name Bar -->
+                <div class="relative mb-3">
+                    <input type="text" id="search-name" placeholder="ค้นหาชื่อวัด, งานกฐิน, ผ้าป่า..." onkeyup="if(event.key === 'Enter') loadCafes()" class="w-full bg-orange-50 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-black placeholder-gray-500 transition focus:ring-2 focus:ring-orange-100 border border-orange-100">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-black"></i>
+                    <button onclick="loadCafes()" class="absolute right-2 top-2 bg-orange-600 text-white rounded-lg w-8 h-8 flex items-center justify-center shadow-sm active:scale-95 transition hover:bg-orange-700">
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Filter -->
+                <div class="flex space-x-2">
+                    <div class="flex-1 relative">
+                        <select id="filter-province" onchange="updateDistricts(); loadCafes();" class="w-full bg-orange-50 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-black cursor-pointer border border-orange-100">
+                            <option value="">ทุกจังหวัด</option>
+                        </select>
+                        <i class="fa-solid fa-map-pin absolute left-4 top-3.5 text-black"></i>
+                    </div>
+                    <div class="flex-1 relative">
+                        <select id="filter-district" onchange="loadCafes()" class="w-full bg-orange-50 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-black cursor-pointer border border-orange-100">
+                            <option value="">ทุกอำเภอ</option>
+                        </select>
+                        <i class="fa-solid fa-location-crosshairs absolute left-4 top-3.5 text-black"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-5 mt-6">
+                <!-- Upcoming Events (Changed from Popular) -->
+                <div class="flex justify-between items-end mb-3">
+                    <h2 class="text-lg font-bold text-black">งานบุญเร็วๆ นี้ ⏳</h2>
+                </div>
+                <div id="top-section" class="flex overflow-x-auto space-x-4 pb-4 hide-scrollbar snap-x">
+                    <div class="flex-none w-full text-center py-4 text-black text-sm">กำลังโหลดข้อมูลบุญ...</div>
+                </div>
+
+                <!-- Feed List -->
+                <div class="flex justify-between items-end mb-3 mt-2">
+                    <h2 class="text-lg font-bold text-black">สถานที่บอกบุญทั้งหมด 📍</h2>
+                    <button onclick="loadCafes()" class="text-xs text-black underline font-bold">รีเฟรช</button>
+                </div>
+                <div id="cafe-list" class="space-y-5 pb-10">
+                    <div class="flex flex-col items-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-800"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 2: ADD CAFE (ADD EVENT) -->
+        <div id="page-add-cafe" class="hidden page-transition bg-white min-h-full">
+            <div class="sticky top-0 bg-white z-30 px-6 py-4 shadow-sm flex items-center border-b border-orange-100">
+                <h1 class="text-xl font-bold flex-1 text-center text-black">ลงประกาศบอกบุญ</h1>
+            </div>
+            
+            <div class="p-6">
+                <form id="cafe-form" onsubmit="handleCafeSubmit(event)" class="space-y-5">
+                    
+                    <!-- Image Upload -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-black">รูปภาพวัด/สถานที่จัดงาน</label>
+                        <div class="flex space-x-3 overflow-x-auto pb-2">
+                            <!-- Image 1 -->
+                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-stone-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file1').click()">
+                                <img id="preview1" class="absolute w-full h-full object-cover hidden">
+                                <i class="fa-solid fa-camera text-black text-xl" id="icon1"></i>
+                                <input type="file" id="file1" accept="image/*" class="hidden" onchange="previewImage(this, 'preview1', 'icon1')">
+                            </div>
+                            <!-- Image 2 -->
+                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-stone-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file2').click()">
+                                <img id="preview2" class="absolute w-full h-full object-cover hidden">
+                                <i class="fa-solid fa-plus text-black text-xl" id="icon2"></i>
+                                <input type="file" id="file2" accept="image/*" class="hidden" onchange="previewImage(this, 'preview2', 'icon2')">
+                            </div>
+                            <!-- Image 3 -->
+                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-stone-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file3').click()">
+                                <img id="preview3" class="absolute w-full h-full object-cover hidden">
+                                <i class="fa-solid fa-plus text-black text-xl" id="icon3"></i>
+                                <input type="file" id="file3" accept="image/*" class="hidden" onchange="previewImage(this, 'preview3', 'icon3')">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-black required-star">ชื่อวัด / ชื่องานบุญ</label>
+                        <input type="text" id="name" required class="w-full p-4 bg-stone-50 rounded-xl border-none outline-none text-black focus:ring-1 focus:ring-orange-200" placeholder="เช่น วัดป่า..., งานทอดกฐิน...">
+                    </div>
+
+                    <!-- NEW: Date Input (MANDATORY) -->
+                    <div class="bg-red-50 p-3 rounded-xl border border-red-100">
+                        <label class="block text-sm font-bold mb-1 text-black required-star">วันที่จัดงาน (จำเป็น)</label>
+                        <p class="text-xs text-red-500 mb-2">* ระบบจะลบโพสต์อัตโนมัติเมื่อพ้นกำหนด 90 วัน</p>
+                        <input type="date" id="event_date" required class="w-full p-4 bg-white rounded-xl border border-red-200 outline-none text-black focus:ring-1 focus:ring-orange-200">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-black required-star">จังหวัด</label>
+                            <select id="form-province" onchange="updateFormDistricts()" required class="w-full p-4 bg-stone-50 rounded-xl outline-none text-black"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-black required-star">อำเภอ</label>
+                            <select id="form-district" required class="w-full p-4 bg-stone-50 rounded-xl outline-none text-black">
+                                <option value="">เลือก</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-black">รายละเอียด / กำหนดการ</label>
+                        <textarea id="description" rows="3" class="w-full p-4 bg-stone-50 rounded-xl outline-none text-black focus:ring-1 focus:ring-orange-200" placeholder="เชิญร่วมเป็นเจ้าภาพ, กำหนดการเริ่มเวลา..."></textarea>
+                    </div>
+
+                    <!-- Map Picker -->
+                    <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                        <div class="mb-2">
+                            <p class="text-sm font-bold text-black mb-2 required-star"><i class="fa-solid fa-map-location-dot mr-2"></i> ปักหมุดสถานที่</p>
+                            
+                            <!-- Search Bar -->
+                            <div class="flex space-x-2">
+                                <input type="text" id="map-search-input" placeholder="ค้นหาสถานที่ใน Google Map..." class="flex-1 p-2 rounded-lg text-sm border-none outline-none text-black">
+                                <button type="button" onclick="searchLocation()" class="bg-orange-600 text-white px-3 py-2 rounded-lg text-sm shadow-sm hover:bg-orange-700 active:scale-95 transition">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="picker-map" class="w-full h-48 rounded-lg bg-gray-200 z-0 mb-3 relative border-2 border-white"></div>
+                        
+                        <!-- Hidden Inputs -->
+                        <input type="hidden" id="lat">
+                        <input type="hidden" id="lng">
+                        <p class="text-xs text-center text-black" id="location-status">👆 จิ้มบนแผนที่เพื่อระบุพิกัดวัด/สถานที่</p>
+                    </div>
+
+                    <button type="submit" id="btn-submit-cafe" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/30 active:scale-95 transition-transform">
+                        บันทึกการบอกบุญ
+                    </button>
+                </form>
+                <div class="h-20"></div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: DETAIL (Dialog) -->
+        <div id="page-detail" class="hidden page-transition bg-white min-h-full absolute top-0 left-0 w-full z-50">
+            <button onclick="closeDetail()" class="absolute top-4 left-4 z-50 bg-white/80 backdrop-blur p-2 rounded-full shadow-lg w-10 h-10 flex items-center justify-center hover:bg-white transition">
+                <i class="fa-solid fa-arrow-left text-black"></i>
+            </button>
+            
+            <!-- Floating Delete Button -->
+            <button id="btn-delete-cafe" onclick="deleteCafe()" class="hidden absolute top-4 right-4 z-[60] bg-red-500/90 text-white p-2 rounded-full shadow-lg w-10 h-10 flex items-center justify-center hover:bg-red-600 transition cursor-pointer">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+
+            <div class="h-[40vh] w-full relative bg-stone-200">
+                <img id="detail-img-main" src="" class="w-full h-full object-cover transition-opacity duration-300">
+                <div class="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-black/60 to-transparent"></div>
+            </div>
+
+            <div class="relative -mt-6 bg-white rounded-t-[30px] p-6 pb-24 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] min-h-[60vh]">
+                
+                <!-- Gallery Thumbnails -->
+                <div id="detail-gallery" class="flex space-x-3 mb-4 overflow-x-auto hide-scrollbar hidden -mt-12 relative z-20">
+                    <!-- Thumbnails injected via JS -->
+                </div>
+
+                <div class="flex justify-between items-start mb-4">
+                    <h1 id="detail-name" class="text-2xl font-bold text-black w-3/4 leading-tight">Name</h1>
+                    <div class="flex flex-col items-end">
+                        <div class="bg-orange-50 text-black px-3 py-1 rounded-full text-sm font-bold flex items-center border border-orange-100">
+                            <i class="fa-solid fa-star text-gold mr-1"></i> <span id="detail-rating">0.0</span>
+                        </div>
+                        <div id="detail-date" class="text-xs text-black mt-1 font-medium bg-gray-100 px-2 py-0.5 rounded">
+                            <!-- Date will appear here -->
+                        </div>
+                    </div>
+                </div>
+                <p id="detail-location-text" class="text-sm text-black mb-4 flex items-center">
+                    <i class="fa-solid fa-location-dot mr-2 text-black"></i> <span id="detail-loc">Location</span>
+                </p>
+                
+                <div class="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6">
+                    <h3 class="font-bold text-black mb-2 text-sm">รายละเอียดงานบุญ</h3>
+                    <p id="detail-desc" class="text-black leading-relaxed font-light text-sm whitespace-pre-line">Description...</p>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="font-bold text-black mb-3">แผนที่การเดินทาง</h3>
+                    <div id="detail-map" class="w-full h-48 rounded-xl bg-stone-100 z-0 border border-stone-200"></div>
+                    <button id="btn-navigate" onclick="navigate()" class="w-full mt-2 bg-stone-50 text-black py-2 rounded-lg text-sm font-bold border border-orange-100 flex items-center justify-center hover:bg-orange-50">
+                        <i class="fa-solid fa-diamond-turn-right mr-2"></i> นำทางด้วย Google Maps
+                    </button>
+                </div>
+
+                <!-- Combined Rating & Comment Section -->
+                <div class="border-t border-dashed border-stone-200 pt-6">
+                    <h3 class="font-bold text-center mb-2 text-black">อนุโมทนาบุญ & ให้คะแนน</h3>
+                    
+                    <!-- Stars -->
+                    <div class="flex justify-center space-x-3 mb-4" id="rating-stars"></div>
+                    
+                    <!-- Comment Box -->
+                    <div class="flex space-x-2 mb-4 bg-stone-50 p-2 rounded-2xl border border-orange-100">
+                        <input type="text" id="comment-input" class="flex-1 bg-transparent border-none px-2 text-sm outline-none text-black placeholder-gray-500" placeholder="ร่วมอนุโมทนา หรือ เขียนรีวิว...">
+                        <button id="btn-send-review" onclick="submitReview()" class="bg-orange-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md active:scale-95 transition hover:bg-orange-700">
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold mb-3 flex justify-between items-center text-black">สาธุชนที่มาร่วมงานล่าสุด</h3>
+                    <div id="comment-list" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="fixed bottom-0 w-full glass-nav pb-safe z-50 h-[80px] bg-white border-t border-stone-100">
+        <div class="grid grid-cols-2 h-16 max-w-md mx-auto">
+            <button onclick="switchTab('home')" class="nav-btn active flex flex-col items-center justify-center text-gray-400 hover:text-black transition-colors" data-page="home">
+                <i class="fa-solid fa-vihara text-xl mb-1"></i> <span class="text-[10px] font-medium">หน้าหลัก</span>
+            </button>
+            <button onclick="switchTab('add-cafe')" class="nav-btn flex flex-col items-center justify-center text-gray-400 hover:text-black relative transition-colors" data-page="add-cafe">
+                <div class="absolute -top-5 bg-gradient-to-tr from-orange-500 to-orange-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+                    <i class="fa-solid fa-plus text-xl"></i>
+                </div>
+                <span class="text-[10px] font-medium mt-6">บอกบุญ</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 bg-stone-800/90 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-[100] text-sm font-medium flex items-center backdrop-blur-sm transform translate-y-[-20px]">
+        <span id="toast-msg">Success</span>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ================= CONFIG =================
+        const API_URL = "https://script.google.com/macros/s/AKfycby93sQkBbzLn1FBFDtSZjXEd8NiO64mqm57cLrgQdXHc78QJfONjopWMzF8QHoO1Rj8lA/exec"; 
+        // ==========================================
+
+        const PROVINCES = {
+            "กรุงเทพมหานคร": ["พระนคร", "ดุสิต", "บางรัก", "บางเขน", "บางกะปิ", "ปทุมวัน", "ยานนาวา", "สัมพันธวงศ์", "พญาไท", "ธนบุรี", "บางกอกใหญ่", "ห้วยขวาง", "คลองสาน", "ตลิ่งชัน", "บางกอกน้อย", "บางขุนเทียน", "ภาษีเจริญ", "หนองแขม", "ราษฎร์บูรณะ", "บางพลัด", "ดินแดง", "บึงกุ่ม", "สาทร", "บางซื่อ", "จตุจักร", "บางคอแหลม", "ประเวศ", "คลองเตย", "สวนหลวง", "จอมทอง", "ดอนเมือง", "ราชเทวี", "ลาดพร้าว", "วัฒนา", "บางแค", "หลักสี่", "สายไหม", "คันนายาว", "สะพานสูง", "วังทองหลาง", "คลองสามวา", "บางนา", "ทวีวัฒนา", "ทุ่งครุ", "บางบอน"],
+            "กระบี่": ["เมืองกระบี่", "เขาพนม", "เกาะลันตา", "คลองท่อม", "อ่าวลึก", "ปลายพระยา", "ลำทับ", "เหนือคลอง"],
+            "กาญจนบุรี": ["เมืองกาญจนบุรี", "ไทรโยค", "บ่อพลอย", "ศรีสวัสดิ์", "ท่ามะกา", "ท่าม่วง", "ทองผาภูมิ", "สังขละบุรี", "พนมทวน", "เลาขวัญ", "ด่านมะขามเตี้ย", "หนองปรือ", "ห้วยกระเจา"],
+            "กาฬสินธุ์": ["เมืองกาฬสินธุ์", "นามน", "กมลาไสย", "ร่องคำ", "กุฉินารายณ์", "เขาวง", "ยางตลาด", "ห้วยเม็ก", "สหัสขันธ์", "คำม่วง", "ท่าคันโท", "หนองกุงศรี", "สมเด็จ", "ห้วยผึ้ง", "สามชัย", "นาคู", "ดอนจาน", "ฆ้องชัย"],
+            "กำแพงเพชร": ["เมืองกำแพงเพชร", "ไทรงาม", "คลองลาน", "ขาณุวรลักษบุรี", "คลองขลุง", "พรานกระต่าย", "ลานกระบือ", "ทรายทองวัฒนา", "ปางศิลาทอง", "บึงสามัคคี", "โกสัมพีนคร"],
+            "ขอนแก่น": ["เมืองขอนแก่น", "บ้านฝาง", "พระยืน", "หนองเรือ", "ชุมแพ", "สีชมพู", "น้ำพอง", "อุบลรัตน์", "กระนวน", "บ้านไผ่", "เปือยน้อย", "พล", "แวงใหญ่", "แวงน้อย", "หนองสองห้อง", "ภูเวียง", "มัญจาคีรี", "ชนบท", "เขาสวนกวาง", "ภูผาม่าน", "ซำสูง", "โคกโพธิ์ไชย", "หนองนาคำ", "บ้านแฮด", "โนนศิลา", "เวียงเก่า"],
+            "จันทบุรี": ["เมืองจันทบุรี", "ขลุง", "ท่าใหม่", "โป่งน้ำร้อน", "มะขาม", "แหลมสิงห์", "สอยดาว", "แก่งหางแมว", "นายายอาม", "เขาคิชฌกูฏ"],
+            "ฉะเชิงเทรา": ["เมืองฉะเชิงเทรา", "บางคล้า", "บางน้ำเปรี้ยว", "บางปะกง", "บ้านโพธิ์", "พนมสารคาม", "ราชสาส์น", "สนามชัยเขต", "แปลงยาว", "ท่าตะเกียบ", "คลองเขื่อน"],
+            "ชลบุรี": ["เมืองชลบุรี", "บ้านบึง", "หนองใหญ่", "บางละมุง", "พานทอง", "พนัสนิคม", "ศรีราชา", "เกาะสีชัง", "สัตหีบ", "บ่อทอง", "เกาะจันทร์"],
+            "ชัยนาท": ["เมืองชัยนาท", "มโนรมย์", "วัดสิงห์", "สรรพยา", "สรรคบุรี", "หันคา", "หนองมะโมง", "เนินขาม"],
+            "ชัยภูมิ": ["เมืองชัยภูมิ", "บ้านเขว้า", "คอนสวรรค์", "เกษตรสมบูรณ์", "หนองบัวแดง", "จัตุรัส", "บำเหน็จณรงค์", "หนองบัวระเหว", "เทพสถิต", "ภูเขียว", "บ้านแท่น", "แก้งคร้อ", "คอนสาร", "ภักดีชุมพล", "เนินสง่า", "ซับใหญ่"],
+            "ชุมพร": ["เมืองชุมพร", "ท่าแซะ", "ปะทิว", "หลังสวน", "ละแม", "พะโต๊ะ", "สวี", "ทุ่งตะโก"],
+            "เชียงราย": ["เมืองเชียงราย", "เวียงชัย", "เชียงของ", "เทิง", "พาน", "ป่าแดด", "แม่จัน", "เชียงแสน", "แม่สาย", "แม่สรวย", "เวียงป่าเป้า", "พญาเม็งราย", "เวียงแก่น", "ขุนตาล", "แม่ฟ้าหลวง", "แม่ลาว", "เวียงเชียงรุ้ง", "ดอยหลวง"],
+            "เชียงใหม่": ["เมืองเชียงใหม่", "จอมทอง", "แม่แจ่ม", "เชียงดาว", "ดอยสะเก็ด", "แม่แตง", "แม่ริม", "สะเมิง", "ฝาง", "แม่อาย", "พร้าว", "สันป่าตอง", "สันกำแพง", "สันทราย", "หางดง", "ฮอด", "ดอยเต่า", "อมก๋อย", "สารภี", "เวียงแหง", "ไชยปราการ", "แม่วาง", "แม่ออน", "ดอยหล่อ", "กัลยาณิวัฒนา"],
+            "ตรัง": ["เมืองตรัง", "กันตัง", "ย่านตาขาว", "ปะเหลียน", "สิเกา", "ห้วยยอด", "วังวิเศษ", "นาโยง", "รัษฎา", "หาดสำราญ"],
+            "ตราด": ["เมืองตราด", "คลองใหญ่", "เขาสมิง", "บ่อไร่", "แหลมงอบ", "เกาะกูด", "เกาะช้าง"],
+            "ตาก": ["เมืองตาก", "บ้านตาก", "สามเงา", "แม่สอด", "แม่ระมาด", "ท่าสองยาง", "พบพระ", "อุ้มผาง", "วังเจ้า"],
+            "นครนายก": ["เมืองนครนายก", "ปากพลี", "บ้านนา", "องครักษ์"],
+            "นครปฐม": ["เมืองนครปฐม", "กำแพงแสน", "นครชัยศรี", "ดอนตูม", "บางเลน", "สามพราน", "พุทธมณฑล"],
+            "นครพนม": ["เมืองนครพนม", "ปลาปาก", "ท่าอุเทน", "บ้านแพง", "ธาตุพนม", "เรณูนคร", "นาแก", "ศรีสงคราม", "นาหว้า", "โพนสวรรค์", "นาทม", "วังยาง"],
+            "นครราชสีมา": ["เมืองนครราชสีมา", "ครบุรี", "เสิงสาง", "คง", "บ้านเหลื่อม", "จักราช", "โชคชัย", "ด่านขุนทด", "โนนไทย", "โนนสูง", "ขามสะแกแสง", "บัวใหญ่", "ประทาย", "ปักธงชัย", "พิมาย", "ห้วยแถลง", "ชุมพวง", "สูงเนิน", "ขามทะเลสอ", "สีคิ้ว", "ปากช่อง", "หนองบุญมาก", "แก้งสนามนาง", "โนนแดง", "วังน้ำเขียว", "เทพารักษ์", "เมืองยาง", "พระทองคำ", "ลำทะเมนชัย", "บัวลาย", "สีดา", "เฉลิมพระเกียรติ"],
+            "นครศรีธรรมราช": ["เมืองนครศรีธรรมราช", "พรหมคีรี", "ลานสกา", "ฉวาง", "พิปูน", "เชียรใหญ่", "ชะอวด", "ท่าศาลา", "ทุ่งสง", "นาบอน", "ทุ่งใหญ่", "ปากพนัง", "ร่อนพิบูลย์", "สิชล", "ขนอม", "หัวไทร", "บางขัน", "ถ้ำพรรณรา", "จุฬาภรณ์", "พระพรหม", "นบพิตำ", "ช้างกลาง", "เฉลิมพระเกียรติ"],
+            "นครสวรรค์": ["เมืองนครสวรรค์", "โกรกพระ", "ชุมแสง", "หนองบัว", "บรรพตพิสัย", "เก้าเลี้ยว", "ตาคลี", "ท่าตะโก", "ไพศาลี", "พยุหะคีรี", "ลาดยาว", "ตากฟ้า", "แม่วงก์", "แม่เปิน", "ชุมตาบง"],
+            "นนทบุรี": ["เมืองนนทบุรี", "บางกรวย", "บางใหญ่", "บางบัวทอง", "ไทรน้อย", "ปากเกร็ด"],
+            "นราธิวาส": ["เมืองนราธิวาส", "ตากใบ", "บาเจาะ", "ยี่งอ", "ระแงะ", "รือเสาะ", "ศรีสาคร", "แว้ง", "สุคิริน", "สุไหงโก-ลก", "สุไหงปาดี", "จะแนะ", "เจาะไอร้อง"],
+            "น่าน": ["เมืองน่าน", "แม่จริม", "บ้านหลวง", "นาน้อย", "ปัว", "ท่าวังผา", "เวียงสา", "ทุ่งช้าง", "เชียงกลาง", "นาหมื่น", "สันติสุข", "บ่อเกลือ", "สองแคว", "ภูเพียง", "เฉลิมพระเกียรติ"],
+            "บึงกาฬ": ["เมืองบึงกาฬ", "พรเจริญ", "โซ่พิสัย", "เซกา", "ปากคาด", "บึงโขงหลง", "ศรีวิไล", "บุ่งคล้า"],
+            "บุรีรัมย์": ["เมืองบุรีรัมย์", "คูเมือง", "กระสัง", "นางรอง", "หนองกี่", "ละหานทราย", "ประโคนชัย", "บ้านกรวด", "พุทไธสง", "ลำปลายมาศ", "สตึก", "ปะคำ", "นาโพธิ์", "หนองหงส์", "พลับพลาชัย", "ห้วยราช", "โนนสุวรรณ", "ชำนิ", "บ้านใหม่ไชยพจน์", "โนนดินแดง", "บ้านด่าน", "แคนดง", "เฉลิมพระเกียรติ"],
+            "ปทุมธานี": ["เมืองปทุมธานี", "คลองหลวง", "ธัญบุรี", "หนองเสือ", "ลาดหลุมแก้ว", "ลำลูกกา", "สามโคก"],
+            "ประจวบคีรีขันธ์": ["เมืองประจวบคีรีขันธ์", "กุยบุรี", "ทับสะแก", "บางสะพาน", "บางสะพานน้อย", "ปราณบุรี", "หัวหิน", "สามร้อยยอด"],
+            "ปราจีนบุรี": ["เมืองปราจีนบุรี", "กบินทร์บุรี", "นาดี", "สระแก้ว", "บ้านสร้าง", "ประจันตคาม", "ศรีมหาโพธิ", "ศรีมโหสถ"],
+            "ปัตตานี": ["เมืองปัตตานี", "โคกโพธิ์", "หนองจิก", "ปะนาเระ", "มายอ", "ทุ่งยางแดง", "สายบุรี", "ไม้แก่น", "ยะหริ่ง", "ยะรัง", "กะพ้อ", "แม่ลาน"],
+            "พระนครศรีอยุธยา": ["พระนครศรีอยุธยา", "ท่าเรือ", "นครหลวง", "บางไทร", "บางบาล", "บางปะอิน", "บางปะหัน", "ผักไห่", "ภาชี", "ลาดบัวหลวง", "วังน้อย", "เสนา", "บางซ้าย", "อุทัย", "มหาราช", "บ้านแพรก"],
+            "พะเยา": ["เมืองพะเยา", "จุน", "เชียงคำ", "เชียงม่วน", "ดอกคำใต้", "ปง", "แม่ใจ", "ภูซาง", "ภูกามยาว"],
+            "พังงา": ["เมืองพังงา", "เกาะยาว", "กะปง", "ตะกั่วทุ่ง", "ตะกั่วป่า", "คุระบุรี", "ทับปุด", "ท้ายเหมือง"],
+            "พัทลุง": ["เมืองพัทลุง", "กงหรา", "เขาชัยสน", "ตะโหมด", "ควนขนุน", "ปากพะยูน", "ศรีบรรพต", "ป่าบอน", "บางแก้ว", "ป่าพะยอม", "ศรีนครินทร์"],
+            "พิจิตร": ["เมืองพิจิตร", "วังทรายพูน", "โพธิ์ประทับช้าง", "ตะพานหิน", "บางมูลนาก", "โพทะเล", "สามง่าม", "ทับคล้อ", "สากเหล็ก", "บึงนาราง", "ดงเจริญ", "วชิรบารมี"],
+            "พิษณุโลก": ["เมืองพิษณุโลก", "นครไทย", "ชาติตระการ", "บางระกำ", "บางกระทุ่ม", "พรหมพิราม", "วัดโบสถ์", "วังทอง", "เนินมะปราง"],
+            "เพชรบุรี": ["เมืองเพชรบุรี", "เขาย้อย", "หนองหญ้าปล้อง", "ชะอำ", "ท่ายาง", "บ้านลาด", "บ้านแหลม", "แก่งกระจาน"],
+            "เพชรบูรณ์": ["เมืองเพชรบูรณ์", "ชนแดน", "หล่มสัก", "หล่มเก่า", "วิเชียรบุรี", "ศรีเทพ", "หนองไผ่", "บึงสามพัน", "น้ำหนาว", "วังโป่ง", "เขาค้อ"],
+            "แพร่": ["เมืองแพร่", "ร้องกวาง", "ลอง", "สูงเม่น", "เด่นชัย", "สอง", "วังชิ้น", "หนองม่วงไข่"],
+            "ภูเก็ต": ["เมืองภูเก็ต", "กะทู้", "ถลาง"],
+            "มหาสารคาม": ["เมืองมหาสารคาม", "แกดำ", "โกสุมพิสัย", "กันทรวิชัย", "เชียงยืน", "บรบือ", "นาเชือก", "พยัคฆภูมิพิสัย", "วาปีปทุม", "นาดูน", "ยางสีสุราช", "กุดรัง", "ชื่นชม"],
+            "มุกดาหาร": ["เมืองมุกดาหาร", "นิคมคำสร้อย", "ดอนตาล", "ดงหลวง", "คำชะอี", "หว้านใหญ่", "หนองสูง"],
+            "แม่ฮ่องสอน": ["เมืองแม่ฮ่องสอน", "ขุนยวม", "ปาย", "แม่สะเรียง", "แม่ลาน้อย", "สบเมย", "ปางมะผ้า"],
+            "ยโสธร": ["เมืองยโสธร", "ทรายมูล", "กุดชุม", "คำเขื่อนแก้ว", "ป่าติ้ว", "มหาชนะชัย", "ค้อวัง", "เลิงนกทา", "ไทยเจริญ"],
+            "ยะลา": ["เมืองยะลา", "เบตง", "บันนังสตา", "ธารโต", "ยะหา", "รามัน", "กาบัง", "กรงปินัง"],
+            "ร้อยเอ็ด": ["เมืองร้อยเอ็ด", "เกษตรวิสัย", "ปทุมรัตต์", "จตุรพักตรพิมาน", "ธวัชบุรี", "พนมไพร", "โพนทอง", "โพธิ์ชัย", "หนองพอก", "เสลภูมิ", "สุวรรณภูมิ", "เมืองสรวง", "โพนทราย", "อาจสามารถ", "เมยวดี", "ศรีสมเด็จ", "จังหาร", "เชียงขวัญ", "หนองฮี", "ทุ่งเขาหลวง"],
+            "ระนอง": ["เมืองระนอง", "ละอุ่น", "กะเปอร์", "กระบุรี", "สุขสำราญ"],
+            "ระยอง": ["เมืองระยอง", "บ้านฉาง", "แกลง", "วังจันทร์", "บ้านค่าย", "ปลวกแดง", "เขาชะเมา", "นิคมพัฒนา"],
+            "ราชบุรี": ["เมืองราชบุรี", "จอมบึง", "สวนผึ้ง", "ดำเนินสะดวก", "บ้านโป่ง", "บางแพ", "โพธาราม", "ปากท่อ", "วัดเพลง", "บ้านคา"],
+            "ลพบุรี": ["เมืองลพบุรี", "พัฒนานิคม", "โคกสำโรง", "ชัยบาดาล", "ท่าวุ้ง", "บ้านหมี่", "ท่าหลวง", "สระโบสถ์", "โคกเจริญ", "ลำสนธิ", "หนองม่วง"],
+            "ลำปาง": ["เมืองลำปาง", "แม่เมาะ", "เกาะคา", "เสริมงาม", "งาว", "แจ้ห่ม", "วังเหนือ", "เถิน", "แม่พริก", "แม่ทะ", "สบปราบ", "ห้างฉัตร", "เมืองปาน"],
+            "ลำพูน": ["เมืองลำพูน", "แม่ทา", "บ้านโฮ่ง", "ลี้", "ทุ่งหัวช้าง", "ป่าซาง", "บ้านธิ", "เวียงหนองล่อง"],
+            "เลย": ["เมืองเลย", "นาด้วง", "เชียงคาน", "ปากชม", "ด่านซ้าย", "นาแห้ว", "ภูเรือ", "ท่าลี่", "วังสะพุง", "ภูกระดึง", "ภูหลวง", "ผาขาว", "เอราวัณ", "หนองหิน"],
+            "ศรีสะเกษ": ["เมืองศรีสะเกษ", "ยางชุมน้อย", "กันทรารมย์", "กันทรลักษ์", "ขุขันธ์", "ไพรบึง", "ปรางค์กู่", "ขุนหาญ", "ราษีไศล", "อุทุมพรพิสัย", "บึงบูรพ์", "ห้วยทับทัน", "โนนคูณ", "ศรีรัตนะ", "น้ำเกลี้ยง", "วังหิน", "ภูสิงห์", "เมืองจันทร์", "เบญจลักษ์", "พยุห์", "โพธิ์ศรีสุวรรณ", "ศิลาลาด"],
+            "สกลนคร": ["เมืองสกลนคร", "กุสุมาลย์", "กุดบาก", "พรรณานิคม", "พังโคน", "วาริชภูมิ", "นิคมน้ำอูน", "วานรนิวาส", "คำตากล้า", "บ้านม่วง", "อากาศอำนวย", "สว่างแดนดิน", "ส่องดาว", "เต่างอย", "โคกศรีสุพรรณ", "เจริญศิลป์", "โพนนาแก้ว", "ภูพาน"],
+            "สงขลา": ["เมืองสงขลา", "สทิงพระ", "จะนะ", "นาทวี", "เทพา", "สะบ้าย้อย", "ระโนด", "กระแสสินธุ์", "รัตภูมิ", "สะเดา", "หาดใหญ่", "นาหม่อม", "ควนเนียง", "บางกล่ำ", "สิงหนคร", "คลองหอยโข่ง"],
+            "สตูล": ["เมืองสตูล", "ควนโดน", "ควนกาหลง", "ท่าแพ", "ละงู", "ทุ่งหว้า", "มะนัง"],
+            "สมุทรปราการ": ["เมืองสมุทรปราการ", "บางบ่อ", "บางพลี", "พระประแดง", "พระสมุทรเจดีย์", "บางเสาธง"],
+            "สมุทรสงคราม": ["เมืองสมุทรสงคราม", "บางคนที", "อัมพวา"],
+            "สมุทรสาคร": ["เมืองสมุทรสาคร", "กระทุ่มแบน", "บ้านแพ้ว"],
+            "สระแก้ว": ["เมืองสระแก้ว", "คลองหาด", "ตาพระยา", "วังน้ำเย็น", "วัฒนานคร", "อรัญประเทศ", "เขาฉกรรจ์", "โคกสูง", "วังสมบูรณ์"],
+            "สระบุรี": ["เมืองสระบุรี", "แก่งคอย", "หนองแค", "วิหารแดง", "หนองแซง", "บ้านหมอ", "ดอนพุด", "หนองโดน", "พระพุทธบาท", "เสาไห้", "มวกเหล็ก", "วังม่วง", "เฉลิมพระเกียรติ"],
+            "สิงห์บุรี": ["เมืองสิงห์บุรี", "บางระจัน", "ค่ายบางระจัน", "พรหมบุรี", "ท่าช้าง", "อินทร์บุรี"],
+            "สุโขทัย": ["เมืองสุโขทัย", "บ้านด่านลานหอย", "คีรีมาศ", "กงไกรลาศ", "ศรีสัชนาลัย", "ศรีสำโรง", "สวรรคโลก", "ศรีนคร", "ทุ่งเสลี่ยม"],
+            "สุพรรณบุรี": ["เมืองสุพรรณบุรี", "เดิมบางนางบวช", "ด่านช้าง", "บางปลาม้า", "ศรีประจันต์", "ดอนเจดีย์", "สองพี่น้อง", "สามชุก", "อู่ทอง", "หนองหญ้าไซ"],
+            "สุราษฎร์ธานี": ["เมืองสุราษฎร์ธานี", "กาญจนดิษฐ์", "ดอนสัก", "เกาะสมุย", "เกาะพะงัน", "ไชยา", "ท่าชนะ", "คีรีรัฐนิคม", "บ้านตาขุน", "พนม", "ท่าฉาง", "บ้านนาสาร", "บ้านนาเดิม", "เคียนซา", "เวียงสระ", "พระแสง", "พุนพิน", "ชัยบุรี", "วิภาวดี"],
+            "สุรินทร์": ["เมืองสุรินทร์", "ชุมพลบุรี", "ท่าตูม", "จอมพระ", "ปราสาท", "กาบเชิง", "รัตนบุรี", "สนม", "ศีขรภูมิ", "สังขะ", "ลำดวน", "สำโรงทาบ", "บัวเชด", "พนมดงรัก", "ศรีณรงค์", "เขวาสินรินทร์", "โนนนารายณ์"],
+            "หนองคาย": ["เมืองหนองคาย", "ท่าบ่อ", "โพนพิสัย", "ศรีเชียงใหม่", "สังคม", "สระใคร", "เฝ้าไร่", "รัตนวาปี", "โพธิ์ตาก"],
+            "หนองบัวลำภู": ["เมืองหนองบัวลำภู", "นากลาง", "โนนสัง", "ศรีบุญเรือง", "สุวรรณคูหา", "นาวัง"],
+            "อ่างทอง": ["เมืองอ่างทอง", "ไชโย", "ป่าโมก", "โพธิ์ทอง", "แสวงหา", "วิเศษชัยชาญ", "สามโก้"],
+            "อำนาจเจริญ": ["เมืองอำนาจเจริญ", "ชานุมาน", "ปทุมราชวงศา", "พนา", "เสนางคนิคม", "หัวตะพาน", "ลืออำนาจ"],
+            "อุดรธานี": ["เมืองอุดรธานี", "กุดจับ", "หนองวัวซอ", "กุมภวาปี", "โนนสะอาด", "หนองหาน", "ทุ่งฝน", "ไชยวาน", "ศรีธาตุ", "วังสามหมอ", "บ้านดุง", "บ้านผือ", "น้ำโสม", "เพ็ญ", "สร้างคอม", "หนองแสง", "นายูง", "พิบูลย์รักษ์", "กู่แก้ว", "ประจักษ์ศิลปาคม"],
+            "อุตรดิตถ์": ["เมืองอุตรดิตถ์", "ตรอน", "ท่าปลา", "น้ำปาด", "ฟากท่า", "บ้านโคก", "พิชัย", "ลับแล", "ทองแสนขัน"],
+            "อุทัยธานี": ["เมืองอุทัยธานี", "ทัพทัน", "สว่างอารมณ์", "หนองฉาง", "หนองขาหย่าง", "บ้านไร่", "ลานสัก", "ห้วยคต"],
+            "อุบลราชธานี": ["เมืองอุบลราชธานี", "ศรีเมืองใหม่", "โขงเจียม", "เขื่องใน", "เขมราฐ", "เดชอุดม", "นาจะหลวย", "น้ำยืน", "บุณฑริก", "ตระการพืชผล", "กุดข้าวปุ้น", "ม่วงสามสิบ", "วารินชำราบ", "พิบูลมังสาหาร", "ตาลสุม", "โพธิ์ไทร", "สำโรง", "ดอนมดแดง", "สิรินธร", "ทุ่งศรีอุดม", "นาเยีย", "นาตาล", "เหล่าเสือโก้ก", "สว่างวีระวงศ์", "น้ำขุ่น"]
+        };
+
+        let userKey = localStorage.getItem('merit_user_key') || crypto.randomUUID(); 
+        localStorage.setItem('merit_user_key', userKey);
+        
+        let map = null; 
+        let pickerMap = null;
+        let pickerMarker = null;
+        let currentCafeId = null;
+        let selectedRating = 0; 
+        
+        let cachedCafes = [];
+
+        window.onload = () => {
+            initDropdowns();
+            loadTopCafes();
+            loadCafes();
+            setupTabs();
+        };
+
+        function setupTabs() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById('page-detail').classList.add('hidden');
+                    const page = btn.dataset.page;
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('text-orange-600', 'active'));
+                    btn.classList.add('text-orange-600');
+                    if(page === 'home') document.getElementById('page-add-cafe').classList.add('hidden');
+                    else {
+                        document.getElementById('page-home').classList.add('hidden');
+                        setTimeout(initPickerMap, 200); 
+                    }
+                    document.getElementById(`page-${page}`).classList.remove('hidden');
+                });
+            });
+        }
+
+        function switchTab(pageId) {
+            const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+            if(btn) btn.click();
+        }
+
+        function initDropdowns() {
+            const setOpts = (id) => {
+                const el = document.getElementById(id);
+                el.innerHTML = `<option value="">${id.includes('province')?'ทุกจังหวัด':'เลือก'}</option>`;
+                Object.keys(PROVINCES).sort().forEach(p => el.innerHTML += `<option value="${p}">${p}</option>`);
+            };
+            setOpts('filter-province');
+            setOpts('form-province');
+        }
+
+        function updateDistricts() { 
+            const p = document.getElementById('filter-province').value;
+            const d = document.getElementById('filter-district');
+            d.innerHTML = '<option value="">ทุกอำเภอ</option>';
+            if(p && PROVINCES[p]) PROVINCES[p].forEach(dist => d.innerHTML += `<option value="${dist}">${dist}</option>`);
+        }
+
+        function updateFormDistricts() {
+            const p = document.getElementById('form-province').value;
+            const d = document.getElementById('form-district');
+            d.innerHTML = '<option value="">เลือกอำเภอ</option>';
+            if(p && PROVINCES[p]) PROVINCES[p].forEach(dist => d.innerHTML += `<option value="${dist}">${dist}</option>`);
+        }
+
+        function initPickerMap() {
+            const container = document.getElementById('picker-map');
+            if (container.offsetHeight === 0) return; 
+            if (pickerMap) { pickerMap.invalidateSize(); return; }
+            pickerMap = L.map('picker-map').setView([13.7563, 100.5018], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(pickerMap);
+            pickerMap.on('click', function(e) {
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+                pickerMarker = L.marker([lat, lng]).addTo(pickerMap);
+                document.getElementById('lat').value = lat;
+                document.getElementById('lng').value = lng;
+                document.getElementById('location-status').innerText = `✅ ปักหมุดแล้ว (${lat}, ${lng})`;
+                document.getElementById('location-status').classList.remove('text-black');
+                document.getElementById('location-status').classList.add('text-green-600', 'font-bold');
+            });
+        }
+
+        async function searchLocation() {
+            const query = document.getElementById('map-search-input').value;
+            if (!query) return;
+            const btn = document.querySelector('button[onclick="searchLocation()"]');
+            const icon = btn.querySelector('i');
+            const originalClass = icon.className;
+            icon.className = 'fa-solid fa-spinner fa-spin';
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    pickerMap.setView([lat, lon], 15);
+                    if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+                    pickerMarker = L.marker([lat, lon]).addTo(pickerMap);
+                    document.getElementById('lat').value = lat.toFixed(6);
+                    document.getElementById('lng').value = lon.toFixed(6);
+                    document.getElementById('location-status').innerText = `✅ พบ: ${data[0].display_name.split(',')[0]}`;
+                    document.getElementById('location-status').classList.remove('text-black');
+                    document.getElementById('location-status').classList.add('text-green-600');
+                } else { showToast("ไม่พบสถานที่"); }
+            } catch (e) { showToast("การค้นหาผิดพลาด"); } finally { icon.className = originalClass; }
+        }
+
+        // --- IMAGE & UPLOAD ---
+        async function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+        function previewImage(input, imgId, iconId) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById(imgId);
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById(iconId).classList.add('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+        function changeMainImage(src) {
+            document.getElementById('detail-img-main').src = src;
+        }
+
+        async function handleCafeSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-cafe');
+            const originalText = btn.innerHTML;
+            
+            // VALIDATION
+            if(!document.getElementById('lat').value) { showToast("กรุณาจิ้มพิกัดวัด/สถานที่บนแผนที่"); return; }
+            
+            const eventDate = document.getElementById('event_date').value;
+            if(!eventDate) { showToast("กรุณาระบุวันที่จัดงาน (เพื่อคำนวณวันลบโพสต์)"); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังอัปโหลด...';
+
+            try {
+                const f1 = document.getElementById('file1').files[0];
+                const f2 = document.getElementById('file2').files[0];
+                const f3 = document.getElementById('file3').files[0];
+                
+                const description = document.getElementById('description').value;
+                // Strict packing since date is mandatory
+                const descWithDate = `[DATE:${eventDate}] ${description}`;
+
+                const payload = {
+                    action: 'add_cafe', user_key: userKey,
+                    name: document.getElementById('name').value,
+                    province: document.getElementById('form-province').value,
+                    district: document.getElementById('form-district').value,
+                    description: descWithDate, 
+                    lat: document.getElementById('lat').value,
+                    lng: document.getElementById('lng').value,
+                    image1_base64: f1 ? await getBase64(f1) : "",
+                    image2_base64: f2 ? await getBase64(f2) : "",
+                    image3_base64: f3 ? await getBase64(f3) : ""
+                };
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.success) {
+                    cachedCafes = [];
+                    showToast("บันทึกสำเร็จ อนุโมทนาสาธุ!");
+                    e.target.reset();
+                    ['1','2','3'].forEach(i => {
+                        document.getElementById(`preview${i}`).classList.add('hidden');
+                        document.getElementById(`icon${i}`).classList.remove('hidden');
+                    });
+                    document.getElementById('location-status').innerText = '👆 จิ้มบนแผนที่เพื่อระบุพิกัด';
+                    document.getElementById('location-status').className = 'text-xs text-center text-black';
+                    switchTab('home');
+                    loadCafes();
+                } else { showToast("บันทึกไม่สำเร็จ"); }
+            } catch (err) { showToast("เกิดข้อผิดพลาด: " + err); } finally { btn.disabled = false; btn.innerHTML = originalText; }
+        }
+
+        // --- HELPER: Extract Date from Description ---
+        function getEventDate(desc) {
+            const match = desc.match(/\[DATE:(\d{4}-\d{2}-\d{2})\]/);
+            return match ? match[1] : null;
+        }
+        function cleanDescription(desc) {
+            return desc.replace(/\[DATE:\d{4}-\d{2}-\d{2}\]\s*/, '');
+        }
+
+        // --- HELPER: Check 90 days expiration ---
+        function isExpired(dateStr) {
+            if(!dateStr) return false;
+            const eventDate = new Date(dateStr);
+            const today = new Date();
+            // Calculate difference in days
+            const diffTime = today - eventDate;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            return diffDays > 90; // True if event passed more than 90 days
+        }
+
+        // --- DETAIL & DELETE ---
+        async function openDetail(id) {
+            const page = document.getElementById('page-detail');
+            page.classList.remove('hidden');
+            currentCafeId = id;
+            selectedRating = 0; 
+            document.getElementById('comment-input').value = '';
+            
+            // Reset Gallery
+            document.getElementById('detail-gallery').innerHTML = '';
+            document.getElementById('detail-gallery').classList.add('hidden');
+            
+            document.getElementById('btn-delete-cafe').classList.add('hidden');
+
+            const cachedData = cachedCafes.find(c => c.cafe_id === id);
+            if (cachedData) {
+                renderDetail(cachedData, null); 
+            }
+
+            try {
+                const res = await fetch(`${API_URL}?action=get_details&cafe_id=${id}`);
+                const data = await res.json();
+                renderDetail(data.cafe, data.comments);
+            } catch(e) { console.error(e); }
+        }
+        
+        function renderDetail(cafe, comments) {
+            const isOwner = true; 
+            
+            const btnDelFloating = document.getElementById('btn-delete-cafe');
+            if (isOwner) {
+                btnDelFloating.classList.remove('hidden');
+            } else {
+                btnDelFloating.classList.add('hidden');
+            }
+
+            const rawDate = getEventDate(cafe.description);
+            const cleanDesc = cleanDescription(cafe.description);
+
+            document.getElementById('detail-name').innerText = cafe.name;
+            
+            // FIX 1 (DETAIL PAGE): Smart Image Selection
+            const images = [cafe.image1, cafe.image2, cafe.image3].filter(img => img && img.trim() !== "");
+            const mainImage = images.length > 0 ? images[0] : '';
+            
+            document.getElementById('detail-img-main').src = mainImage; 
+            document.getElementById('detail-rating').innerText = cafe.avg_rating;
+            document.getElementById('detail-location-text').innerHTML = `<i class="fa-solid fa-location-dot mr-2 text-black"></i> ${cafe.district}, ${cafe.province}`;
+            document.getElementById('detail-desc').innerText = cleanDesc;
+            
+            // Show Date if available
+            const dateEl = document.getElementById('detail-date');
+            if(rawDate) {
+                dateEl.innerText = `จัดงาน: ${new Date(rawDate).toLocaleDateString('th-TH')}`;
+                dateEl.classList.remove('hidden');
+            } else {
+                dateEl.classList.add('hidden');
+            }
+
+            // Reuse 'images' array for gallery logic
+            if (images.length > 1) {
+                const galDiv = document.getElementById('detail-gallery');
+                galDiv.classList.remove('hidden');
+                galDiv.innerHTML = images.map(img => `
+                    <div onclick="changeMainImage('${img}')" class="w-16 h-16 rounded-xl overflow-hidden border-2 border-white shadow-md shrink-0 cursor-pointer active:scale-95 transition">
+                        <img src="${img}" class="w-full h-full object-cover">
+                    </div>
+                `).join('');
+            }
+
+            setTimeout(() => initDetailMap(cafe.lat, cafe.lng, cafe.name), 200);
+
+            if (comments === null) {
+                document.getElementById('comment-list').innerHTML = '<div class="text-center py-10 text-orange-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลด...</div>';
+            } else if (comments.length > 0) {
+                document.getElementById('comment-list').innerHTML = comments.map(c => `
+                    <div class="bg-orange-50 p-3 rounded-xl relative border border-orange-100">
+                         <div class="flex items-center mb-1 justify-between">
+                            <span class="text-xs font-bold text-black">ผู้ใช้งาน</span>
+                            ${(String(c.user_key).trim() === String(userKey).trim() || isOwner) ? 
+                                `<button onclick="deleteComment('${c.comment_id}')" class="text-red-400 text-xs hover:text-red-600 p-1"><i class="fa-solid fa-trash"></i></button>` 
+                                : ''}
+                        </div>
+                        <p class="text-sm text-black">${c.comment}</p>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('comment-list').innerHTML = '<p class="text-center text-gray-400 text-sm py-4">ยังไม่มีความคิดเห็น</p>';
+            }
+            
+            renderRatingStars(); 
+        }
+
+        function closeDetail() {
+            document.getElementById('page-detail').classList.add('hidden');
+            currentCafeId = null;
+        }
+
+        async function deleteCafe() {
+            const detailPage = document.getElementById('page-detail');
+            detailPage.classList.add('hidden');
+
+            const result = await Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: "ข้อมูลจะถูกลบถาวร!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444', 
+                cancelButtonColor: '#ea580c',
+                confirmButtonText: 'ลบเลย',
+                cancelButtonText: 'ยกเลิก'
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'กำลังลบ...', didOpen: () => { Swal.showLoading(); } });
+                try {
+                    const res = await fetch(API_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ action: 'delete_cafe', cafe_id: currentCafeId, user_key: userKey }) 
+                    });
+                    const resData = await res.json();
+                    if(resData.success) {
+                        cachedCafes = []; 
+                        await Swal.fire({
+                            title: 'ลบสำเร็จ!',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        closeDetail(); 
+                        loadCafes();
+                        loadTopCafes();
+                    } else {
+                        await Swal.fire('ลบไม่สำเร็จ', 'คุณอาจไม่ใช่เจ้าของโพสต์นี้', 'error');
+                        detailPage.classList.remove('hidden');
+                    }
+                } catch(e) {
+                    await Swal.fire('Error', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'error');
+                    detailPage.classList.remove('hidden');
+                }
+            } else {
+                detailPage.classList.remove('hidden');
+            }
+        }
+
+        async function deleteComment(id) {
+            const result = await Swal.fire({
+                title: 'ลบความคิดเห็น?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#ea580c',
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            });
+            
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'delete_comment',
+                        comment_id: id,
+                        user_key: userKey
+                    })
+                });
+                const resData = await res.json();
+                if(resData.success) {
+                    showToast("ลบความคิดเห็นแล้ว");
+                    openDetail(currentCafeId); // Reload
+                } else {
+                    showToast("ลบไม่สำเร็จ");
+                }
+            } catch(e) { showToast("Error"); }
+        }
+
+        function initDetailMap(lat, lng, title) {
+             if (!lat || !lng) return;
+             const container = document.getElementById('detail-map');
+             if(container.offsetHeight === 0) return;
+             if (map) { map.off(); map.remove(); }
+             map = L.map('detail-map').setView([lat, lng], 15);
+             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+             L.marker([lat, lng]).addTo(map).bindPopup(title);
+        }
+
+        function renderRatingStars() {
+            const container = document.getElementById('rating-stars');
+            let html = '';
+            for(let i=1; i<=5; i++) { 
+                const colorClass = i <= selectedRating ? 'text-gold' : 'text-stone-300';
+                html += `<i onclick="selectRating(${i})" class="fa-solid fa-star text-3xl cursor-pointer ${colorClass} transition-colors star-btn" data-val="${i}"></i>`; 
+            }
+            container.innerHTML = html;
+        }
+
+        function selectRating(score) {
+            selectedRating = score;
+            renderRatingStars();
+        }
+        
+        async function submitReview() {
+            const input = document.getElementById('comment-input');
+            const text = input.value.trim();
+            const btn = document.getElementById('btn-send-review');
+            
+            if (selectedRating === 0 && text === "") {
+                showToast("กรุณาให้คะแนนหรือเขียนรีวิว");
+                return;
+            }
+
+            const originalBtnContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            try {
+                if (selectedRating > 0) {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'add_rating', cafe_id: currentCafeId, user_key: userKey, rating: selectedRating })
+                    });
+                }
+                if (text !== "") {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'add_comment', cafe_id: currentCafeId, user_key: userKey, comment: text })
+                    });
+                }
+                showToast("ร่วมอนุโมทนาเรียบร้อย");
+                openDetail(currentCafeId);
+            } catch (e) {
+                console.error(e);
+                showToast("ส่งข้อมูลไม่สำเร็จ");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnContent;
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            t.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-20px]');
+            setTimeout(() => t.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-20px]'), 3000);
+        }
+
+        async function loadCafes() {
+            const list = document.getElementById('cafe-list');
+            list.innerHTML = `
+                <div class="flex flex-col items-center py-10">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-800"></div>
+                </div>`;
+            
+            const filterProvince = document.getElementById('filter-province').value;
+            const filterDistrict = document.getElementById('filter-district').value;
+            const filterName = document.getElementById('search-name').value.toLowerCase().trim();
+
+            try {
+                let data = [];
+                if(cachedCafes.length === 0) {
+                    const res = await fetch(`${API_URL}?action=list`);
+                    data = await res.json();
+                    cachedCafes = data;
+                } else {
+                    data = cachedCafes;
+                }
+                
+                // FILTER: Remove items older than 90 days from Event Date
+                const validData = data.filter(c => {
+                    const rawDate = getEventDate(c.description);
+                    if(rawDate && isExpired(rawDate)) return false; // Hide expired events
+                    return true;
+                });
+                
+                const filtered = validData.filter(c => {
+                    const matchProvince = filterProvince ? c.province === filterProvince : true;
+                    const matchDistrict = filterDistrict ? c.district === filterDistrict : true;
+                    const matchName = filterName ? c.name.toLowerCase().includes(filterName) : true;
+                    return matchProvince && matchDistrict && matchName;
+                });
+
+                renderList(filtered);
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = `<div class="text-center py-10 text-red-500">โหลดข้อมูลไม่สำเร็จ</div>`;
+            }
+
+            function renderList(items) {
+                if (!items || items.length === 0) {
+                    list.innerHTML = `<div class="text-center py-10 text-gray-400">ไม่พบข้อมูลงานบุญ</div>`;
+                    return;
+                }
+
+                // FIX 2 (LIST PAGE): Handle image fallback
+                list.innerHTML = items.map(c => {
+                    const cover = c.image1 || c.image2 || c.image3 || '';
+                    return `
+                <div onclick="openDetail('${c.cafe_id}')" class="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+                    <div class="relative h-48">
+                    <img src="${cover}" class="w-full h-full object-cover">
+                    <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold flex items-center text-black">
+                        <i class="fa-solid fa-star text-gold mr-1"></i> ${c.avg_rating}
+                    </div>
+                    ${getEventDate(c.description) ? 
+                        `<div class="absolute bottom-3 left-3 bg-orange-600 text-white px-2 py-1 rounded text-xs font-bold shadow-md">
+                           📅 ${new Date(getEventDate(c.description)).toLocaleDateString('th-TH', {day:'numeric', month:'short'})}
+                         </div>` : ''}
+                    </div>
+                    <div class="p-4">
+                    <h3 class="font-bold text-lg text-black mb-1 leading-tight">${c.name}</h3>
+                    <span class="text-xs text-black flex items-center">
+                        <i class="fa-solid fa-location-dot mr-1.5 text-black"></i>
+                        ${c.province}
+                    </span>
+                    </div>
+                </div>
+                `}).join('');
+            }
+        }
+
+        async function loadTopCafes() { 
+             const container = document.getElementById('top-section');
+             container.innerHTML = '<div class="text-black text-sm w-full text-center">กำลังโหลด...</div>';
+
+             try {
+                // To get "Upcoming", we ideally need server-side sort. 
+                // Since we can't change server, we fetch all and sort client-side by extracted date.
+                // But 'action=top' only gives sorted by rating. 
+                // We will try to reuse 'cachedCafes' if available or fetch list.
+                
+                let allData = [];
+                if (cachedCafes.length > 0) allData = cachedCafes;
+                else {
+                    const res = await fetch(`${API_URL}?action=list`);
+                    allData = await res.json();
+                }
+
+                // Logic: Filter items that have future dates, sort by date ascending
+                const today = new Date();
+                const upcoming = allData
+                    .filter(c => {
+                        const d = getEventDate(c.description);
+                        if (!d) return false;
+                        return new Date(d) >= today; // Only future events
+                    })
+                    .sort((a,b) => new Date(getEventDate(a.description)) - new Date(getEventDate(b.description)))
+                    .slice(0,5);
+                
+                // Fallback to top rated if no upcoming events found (or legacy data)
+                const displayData = upcoming.length > 0 ? upcoming : allData.sort((a,b)=>b.avg_rating-a.avg_rating).slice(0,5);
+
+                // FIX 3 (TOP SECTION): Handle image fallback
+                container.innerHTML = displayData.map((c,i)=> {
+                    const cover = c.image1 || c.image2 || c.image3 || '';
+                    return `
+                <div onclick="openDetail('${c.cafe_id}')" class="snap-center shrink-0 w-36 cursor-pointer">
+                    <div class="relative rounded-xl overflow-hidden shadow-sm h-44 mb-2">
+                    <img src="${cover}" class="w-full h-full object-cover">
+                    ${getEventDate(c.description) ? 
+                        `<div class="absolute bottom-0 w-full bg-black/60 text-white text-[10px] px-2 py-1 text-center backdrop-blur-sm">
+                           ${new Date(getEventDate(c.description)).toLocaleDateString('th-TH', {day:'numeric', month:'short'})}
+                         </div>` : ''}
+                    </div>
+                    <h3 class="font-bold text-black text-sm truncate px-1">${c.name}</h3>
+                </div>
+                `}).join('');
+             } catch(e) {
+                container.innerHTML = `<div class="text-gray-400 text-sm">โหลดไม่สำเร็จ</div>`;
+             }
+        }
+        function navigate() { window.open(`https://www.google.com/maps/dir/?api=1&destination=${document.getElementById('lat').value || 13.7563},${document.getElementById('lng').value || 100.5018}`, '_blank'); }
+    </script>
+</body>
+</html>
