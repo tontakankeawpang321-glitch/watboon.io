@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sapanboon App (สะพานบุญ)</title>
+    <title>Sapan Boon - สะพานบุญ</title>
     
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
@@ -19,17 +19,18 @@
             theme: {
                 extend: {
                     colors: {
-                        orange: { 50: '#fff7ed', 100: '#ffedd5', 500: '#f97316', 600: '#ea580c', 800: '#9a3412', 900: '#7c2d12' },
-                        gold: '#fbbf24',
-                        stone: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 800: '#292524' }
+                        // Theme: Amber & Stone (ตามต้นแบบ)
+                        amber: { 50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 500: '#f59e0b', 600: '#d97706', 800: '#92400e', 900: '#78350f' },
+                        stone: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 500: '#78716c', 700: '#44403c', 800: '#292524' },
+                        gold: '#FFC107'
                     },
-                    fontFamily: { sans: ['Prompt', 'sans-serif'] }
+                    fontFamily: { sans: ['Sarabun', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #f5f5f4; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #fafaf9; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .page-transition { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -42,32 +43,39 @@
         
         .text-black-force { color: #000000 !important; }
         .required-star::after { content: " *"; color: red; }
+
+        /* Glass Nav adapted for Amber theme */
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(245, 158, 11, 0.1);
+        }
     </style>
 </head>
-<body class="text-black antialiased h-screen flex flex-col overflow-hidden">
+<body class="text-stone-800 antialiased h-screen flex flex-col overflow-hidden">
 
     <!-- MAIN CONTENT -->
     <main id="app-content" class="flex-1 overflow-y-auto hide-scrollbar pb-24 relative">
         
         <!-- PAGE 1: HOME -->
         <div id="page-home" class="page-transition min-h-full">
-            <div class="bg-white sticky top-0 z-30 px-6 py-4 shadow-sm rounded-b-[30px]">
+            <div class="bg-white sticky top-0 z-30 px-6 py-4 shadow-sm rounded-b-[30px] border-b border-amber-100">
                 <div class="flex justify-between items-center mb-4">
                     <div>
-                        <p class="text-xs text-black font-medium">สะพานบุญออนไลน์</p>
-                        <h1 class="text-2xl font-bold text-black">ค้นหางานบุญ & วัด 🙏</h1>
+                        <p class="text-xs text-amber-600 font-medium"><i class="fa-solid fa-hands-praying mr-1"></i> เจริญพร / สวัสดี</p>
+                        <h1 class="text-2xl font-bold text-amber-800">ค้นหางานบุญ 🙏</h1>
                     </div>
-                    <!-- CHANGED: Favorites Button -->
-                    <div onclick="openFavorites()" class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-bold border border-red-100 cursor-pointer active:scale-95 transition shadow-sm">
+                    <!-- Favorites Button (System Original) -->
+                    <div onclick="openFavorites()" class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-bold border border-red-100 cursor-pointer active:scale-95 transition shadow-sm hover:bg-red-100">
                         <i class="fa-solid fa-heart"></i>
                     </div>
                 </div>
 
                 <!-- Search Name Bar -->
                 <div class="relative mb-3">
-                    <input type="text" id="search-name" placeholder="ค้นหาชื่อวัด, งานกฐิน, ผ้าป่า..." onkeyup="if(event.key === 'Enter') loadCafes()" class="w-full bg-orange-50 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-black placeholder-gray-500 transition focus:ring-2 focus:ring-orange-100 border border-orange-100">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-black"></i>
-                    <button onclick="loadCafes()" class="absolute right-2 top-2 bg-orange-600 text-white rounded-lg w-8 h-8 flex items-center justify-center shadow-sm active:scale-95 transition hover:bg-orange-700">
+                    <input type="text" id="search-name" placeholder="ชื่อวัด, กฐิน, ผ้าป่า..." onkeyup="if(event.key === 'Enter') loadCafes()" class="w-full bg-stone-100 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-stone-800 placeholder-stone-400 transition focus:ring-2 focus:ring-amber-200 focus:bg-white border border-transparent focus:border-amber-300">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-amber-400"></i>
+                    <button onclick="loadCafes()" class="absolute right-2 top-2 bg-amber-500 text-white rounded-lg w-8 h-8 flex items-center justify-center shadow-sm active:scale-95 transition hover:bg-amber-600">
                         <i class="fa-solid fa-arrow-right text-xs"></i>
                     </button>
                 </div>
@@ -75,16 +83,16 @@
                 <!-- Filter -->
                 <div class="flex space-x-2">
                     <div class="flex-1 relative">
-                        <select id="filter-province" onchange="updateDistricts(); loadCafes();" class="w-full bg-orange-50 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-black cursor-pointer border border-orange-100">
+                        <select id="filter-province" onchange="updateDistricts(); loadCafes();" class="w-full bg-stone-100 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-stone-800 cursor-pointer border border-transparent focus:border-amber-300">
                             <option value="">ทุกจังหวัด</option>
                         </select>
-                        <i class="fa-solid fa-map-pin absolute left-4 top-3.5 text-black"></i>
+                        <i class="fa-solid fa-map-pin absolute left-4 top-3.5 text-amber-400"></i>
                     </div>
                     <div class="flex-1 relative">
-                        <select id="filter-district" onchange="loadCafes()" class="w-full bg-orange-50 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-black cursor-pointer border border-orange-100">
+                        <select id="filter-district" onchange="loadCafes()" class="w-full bg-stone-100 rounded-xl py-3 px-4 pl-10 text-sm outline-none text-stone-800 cursor-pointer border border-transparent focus:border-amber-300">
                             <option value="">ทุกอำเภอ</option>
                         </select>
-                        <i class="fa-solid fa-location-crosshairs absolute left-4 top-3.5 text-black"></i>
+                        <i class="fa-solid fa-location-crosshairs absolute left-4 top-3.5 text-amber-400"></i>
                     </div>
                 </div>
             </div>
@@ -92,27 +100,29 @@
             <div class="px-5 mt-6">
                 <!-- Upcoming Events -->
                 <div class="flex justify-between items-end mb-3">
-                    <h2 class="text-lg font-bold text-black">งานบุญเร็วๆ นี้ ⏳</h2>
+                    <h2 class="text-lg font-bold text-amber-900 flex items-center">
+                        <i class="fa-regular fa-calendar-check mr-2 text-amber-500"></i> งานบุญเร็วๆ นี้ ⏳
+                    </h2>
                 </div>
                 <div id="top-section" class="flex overflow-x-auto space-x-4 pb-4 hide-scrollbar snap-x">
-                    <div class="flex-none w-full text-center py-4 text-black text-sm">กำลังโหลดข้อมูลบุญ...</div>
+                    <div class="flex-none w-full text-center py-4 text-stone-400 text-sm">กำลังโหลดข้อมูลบุญ...</div>
                 </div>
 
                 <!-- Feed List -->
                 <div class="flex justify-between items-end mb-3 mt-2">
-                    <h2 class="text-lg font-bold text-black">สถานที่บอกบุญทั้งหมด 📍</h2>
-                    <button onclick="loadCafes()" class="text-xs text-black underline font-bold">รีเฟรช</button>
+                    <h2 class="text-lg font-bold text-amber-900">กระดานบอกบุญทั้งหมด 📍</h2>
+                    <button onclick="loadCafes()" class="text-xs text-amber-600 underline font-bold">รีเฟรช</button>
                 </div>
                 <div id="cafe-list" class="space-y-5 pb-10">
-                    <div class="flex flex-col items-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-800"></div></div>
+                    <div class="flex flex-col items-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div></div>
                 </div>
             </div>
         </div>
 
-        <!-- PAGE 2: ADD CAFE (ADD EVENT) -->
+        <!-- PAGE 2: ADD EVENT (Post) -->
         <div id="page-add-cafe" class="hidden page-transition bg-white min-h-full">
-            <div class="sticky top-0 bg-white z-30 px-6 py-4 shadow-sm flex items-center border-b border-orange-100">
-                <h1 class="text-xl font-bold flex-1 text-center text-black">ลงประกาศบอกบุญ</h1>
+            <div class="sticky top-0 bg-white z-30 px-6 py-4 shadow-sm flex items-center border-b border-amber-100">
+                <h1 class="text-xl font-bold flex-1 text-center text-amber-900">บอกบุญ / แจ้งข่าว</h1>
             </div>
             
             <div class="p-6">
@@ -120,78 +130,78 @@
                     
                     <!-- Image Upload -->
                     <div class="space-y-2">
-                        <label class="block text-sm font-bold text-black">รูปภาพวัด/สถานที่จัดงาน</label>
+                        <label class="block text-sm font-bold text-amber-900">รูปภาพวัด/สถานที่จัดงาน</label>
                         <div class="flex space-x-3 overflow-x-auto pb-2">
                             <!-- Image 1 -->
-                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-stone-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file1').click()">
+                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-amber-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file1').click()">
                                 <img id="preview1" class="absolute w-full h-full object-cover hidden">
-                                <i class="fa-solid fa-camera text-black text-xl" id="icon1"></i>
+                                <i class="fa-solid fa-camera text-amber-400 text-xl" id="icon1"></i>
                                 <input type="file" id="file1" accept="image/*" class="hidden" onchange="previewImage(this, 'preview1', 'icon1')">
                             </div>
                             <!-- Image 2 -->
-                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-stone-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file2').click()">
+                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-amber-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file2').click()">
                                 <img id="preview2" class="absolute w-full h-full object-cover hidden">
-                                <i class="fa-solid fa-plus text-black text-xl" id="icon2"></i>
+                                <i class="fa-solid fa-plus text-amber-400 text-xl" id="icon2"></i>
                                 <input type="file" id="file2" accept="image/*" class="hidden" onchange="previewImage(this, 'preview2', 'icon2')">
                             </div>
                             <!-- Image 3 -->
-                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-stone-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file3').click()">
+                            <div class="flex-none w-24 h-24 bg-stone-50 border-2 border-dashed border-amber-300 rounded-xl flex items-center justify-center relative overflow-hidden" onclick="document.getElementById('file3').click()">
                                 <img id="preview3" class="absolute w-full h-full object-cover hidden">
-                                <i class="fa-solid fa-plus text-black text-xl" id="icon3"></i>
+                                <i class="fa-solid fa-plus text-amber-400 text-xl" id="icon3"></i>
                                 <input type="file" id="file3" accept="image/*" class="hidden" onchange="previewImage(this, 'preview3', 'icon3')">
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-black required-star">ชื่อวัด / ชื่องานบุญ</label>
-                        <input type="text" id="name" required class="w-full p-4 bg-stone-50 rounded-xl border-none outline-none text-black focus:ring-1 focus:ring-orange-200" placeholder="เช่น วัดป่า..., งานทอดกฐิน...">
+                        <label class="block text-sm font-bold mb-1 text-amber-900 required-star">ชื่อวัด / ชื่องานบุญ</label>
+                        <input type="text" id="name" required class="w-full p-4 bg-stone-50 rounded-xl border border-stone-200 outline-none text-stone-800 focus:border-amber-400 focus:ring-1 focus:ring-amber-200" placeholder="เช่น วัดป่า..., งานทอดกฐิน...">
                     </div>
 
                     <!-- Date Input -->
                     <div class="bg-red-50 p-3 rounded-xl border border-red-100">
-                        <label class="block text-sm font-bold mb-1 text-black required-star">วันที่จัดงาน (จำเป็น)</label>
+                        <label class="block text-sm font-bold mb-1 text-stone-800 required-star">วันที่จัดงาน (จำเป็น)</label>
                         <p class="text-xs text-red-500 mb-2">* ระบบจะลบโพสต์อัตโนมัติเมื่อพ้นกำหนด 90 วัน</p>
-                        <input type="date" id="event_date" required class="w-full p-4 bg-white rounded-xl border border-red-200 outline-none text-black focus:ring-1 focus:ring-orange-200">
+                        <input type="date" id="event_date" required class="w-full p-4 bg-white rounded-xl border border-red-200 outline-none text-stone-800 focus:ring-1 focus:ring-amber-200">
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-bold mb-1 text-black required-star">จังหวัด</label>
-                            <select id="form-province" onchange="updateFormDistricts()" required class="w-full p-4 bg-stone-50 rounded-xl outline-none text-black"></select>
+                            <label class="block text-sm font-bold mb-1 text-amber-900 required-star">จังหวัด</label>
+                            <select id="form-province" onchange="updateFormDistricts()" required class="w-full p-4 bg-stone-50 rounded-xl outline-none text-stone-800 border border-stone-200 focus:border-amber-400"></select>
                         </div>
                         <div>
-                            <label class="block text-sm font-bold mb-1 text-black required-star">อำเภอ</label>
-                            <select id="form-district" required class="w-full p-4 bg-stone-50 rounded-xl outline-none text-black">
+                            <label class="block text-sm font-bold mb-1 text-amber-900 required-star">อำเภอ</label>
+                            <select id="form-district" required class="w-full p-4 bg-stone-50 rounded-xl outline-none text-stone-800 border border-stone-200 focus:border-amber-400">
                                 <option value="">เลือก</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-black">รายละเอียด / กำหนดการ</label>
-                        <textarea id="description" rows="3" class="w-full p-4 bg-stone-50 rounded-xl outline-none text-black focus:ring-1 focus:ring-orange-200" placeholder="เชิญร่วมเป็นเจ้าภาพ, กำหนดการเริ่มเวลา..."></textarea>
+                        <label class="block text-sm font-bold mb-1 text-amber-900">รายละเอียด / กำหนดการ</label>
+                        <textarea id="description" rows="3" class="w-full p-4 bg-stone-50 rounded-xl outline-none text-stone-800 border border-stone-200 focus:border-amber-400" placeholder="เชิญร่วมเป็นเจ้าภาพ, กำหนดการเริ่มเวลา..."></textarea>
                     </div>
 
                     <!-- Map Picker -->
-                    <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
                         <div class="mb-2">
-                            <p class="text-sm font-bold text-black mb-2 required-star"><i class="fa-solid fa-map-location-dot mr-2"></i> ปักหมุดสถานที่</p>
+                            <p class="text-sm font-bold text-amber-900 mb-2 required-star"><i class="fa-solid fa-map-location-dot mr-2"></i> ปักหมุดสถานที่</p>
                             <div class="flex space-x-2">
-                                <input type="text" id="map-search-input" placeholder="ค้นหาสถานที่ใน Google Map..." class="flex-1 p-2 rounded-lg text-sm border-none outline-none text-black">
-                                <button type="button" onclick="searchLocation()" class="bg-orange-600 text-white px-3 py-2 rounded-lg text-sm shadow-sm hover:bg-orange-700 active:scale-95 transition">
+                                <input type="text" id="map-search-input" placeholder="ค้นหาสถานที่ใน Google Map..." class="flex-1 p-2 rounded-lg text-sm border-none outline-none text-stone-800 shadow-sm">
+                                <button type="button" onclick="searchLocation()" class="bg-amber-500 text-white px-3 py-2 rounded-lg text-sm shadow-sm hover:bg-amber-600 active:scale-95 transition">
                                     <i class="fa-solid fa-magnifying-glass"></i>
                                 </button>
                             </div>
                         </div>
-                        <div id="picker-map" class="w-full h-48 rounded-lg bg-gray-200 z-0 mb-3 relative border-2 border-white"></div>
+                        <div id="picker-map" class="w-full h-48 rounded-lg bg-gray-200 z-0 mb-3 relative border-2 border-white shadow-sm"></div>
                         <input type="hidden" id="lat">
                         <input type="hidden" id="lng">
-                        <p class="text-xs text-center text-black" id="location-status">👆 จิ้มบนแผนที่เพื่อระบุพิกัดวัด/สถานที่</p>
+                        <p class="text-xs text-center text-amber-600" id="location-status">👆 จิ้มบนแผนที่เพื่อระบุพิกัดวัด/สถานที่</p>
                     </div>
 
-                    <button type="submit" id="btn-submit-cafe" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/30 active:scale-95 transition-transform">
-                        บันทึกการบอกบุญ
+                    <button type="submit" id="btn-submit-cafe" class="w-full bg-amber-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 active:scale-95 transition-transform hover:bg-amber-600">
+                        <i class="fa-solid fa-share-from-square mr-2"></i> บันทึกประกาศงานบุญ
                     </button>
                 </form>
                 <div class="h-20"></div>
@@ -200,8 +210,8 @@
 
         <!-- PAGE 3: DETAIL (Dialog) -->
         <div id="page-detail" class="hidden page-transition bg-white min-h-full absolute top-0 left-0 w-full z-50">
-            <button onclick="closeDetail()" class="absolute top-4 left-4 z-50 bg-white/80 backdrop-blur p-2 rounded-full shadow-lg w-10 h-10 flex items-center justify-center hover:bg-white transition">
-                <i class="fa-solid fa-arrow-left text-black"></i>
+            <button onclick="closeDetail()" class="absolute top-4 left-4 z-50 bg-white/80 backdrop-blur p-2 rounded-full shadow-lg w-10 h-10 flex items-center justify-center hover:bg-white transition text-amber-800">
+                <i class="fa-solid fa-arrow-left"></i>
             </button>
             
             <!-- Floating Delete Button (Owner) -->
@@ -211,7 +221,7 @@
 
             <div class="h-[40vh] w-full relative bg-stone-200">
                 <img id="detail-img-main" src="" class="w-full h-full object-cover transition-opacity duration-300">
-                <div class="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black/70 to-transparent"></div>
             </div>
 
             <div class="relative -mt-6 bg-white rounded-t-[30px] p-6 pb-24 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] min-h-[60vh]">
@@ -220,49 +230,49 @@
                 <div id="detail-gallery" class="flex space-x-3 mb-4 overflow-x-auto hide-scrollbar hidden -mt-12 relative z-20"></div>
 
                 <div class="flex justify-between items-start mb-4">
-                    <h1 id="detail-name" class="text-2xl font-bold text-black w-3/4 leading-tight">Name</h1>
+                    <h1 id="detail-name" class="text-2xl font-bold text-amber-900 w-3/4 leading-tight">Name</h1>
                     <div class="flex flex-col items-end space-y-2">
-                        <div class="bg-orange-50 text-black px-3 py-1 rounded-full text-sm font-bold flex items-center border border-orange-100">
+                        <div class="bg-amber-50 text-amber-800 px-3 py-1 rounded-full text-sm font-bold flex items-center border border-amber-200 shadow-sm">
                             <i class="fa-solid fa-star text-gold mr-1"></i> <span id="detail-rating">0.0</span>
                         </div>
                         <!-- Favorite Toggle Button -->
-                        <button id="btn-fav-toggle" onclick="toggleFavoriteCurrent()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition active:scale-90">
-                            <i class="fa-regular fa-heart text-gray-400"></i>
+                        <button id="btn-fav-toggle" onclick="toggleFavoriteCurrent()" class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center transition active:scale-90 hover:bg-stone-200">
+                            <i class="fa-regular fa-heart text-stone-400"></i>
                         </button>
                     </div>
                 </div>
-                <div id="detail-date" class="text-xs text-black font-medium bg-gray-100 px-2 py-1 rounded inline-block mb-2"></div>
-                <p id="detail-location-text" class="text-sm text-black mb-4 flex items-center">
-                    <i class="fa-solid fa-location-dot mr-2 text-black"></i> <span id="detail-loc">Location</span>
+                <div id="detail-date" class="text-xs text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-100 inline-block mb-2"></div>
+                <p id="detail-location-text" class="text-sm text-stone-500 mb-4 flex items-center">
+                    <i class="fa-solid fa-map-pin mr-2 text-amber-500"></i> <span id="detail-loc">Location</span>
                 </p>
                 
-                <div class="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6">
-                    <h3 class="font-bold text-black mb-2 text-sm">รายละเอียดงานบุญ</h3>
-                    <p id="detail-desc" class="text-black leading-relaxed font-light text-sm whitespace-pre-line">Description...</p>
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-100 mb-6">
+                    <h3 class="font-bold text-amber-900 mb-2 text-sm">รายละเอียดงานบุญ</h3>
+                    <p id="detail-desc" class="text-stone-700 leading-relaxed font-light text-sm whitespace-pre-line">Description...</p>
                 </div>
 
                 <div class="mb-8">
-                    <h3 class="font-bold text-black mb-3">แผนที่การเดินทาง</h3>
+                    <h3 class="font-bold text-amber-900 mb-3"><i class="fa-solid fa-map"></i> แผนที่เดินทาง</h3>
                     <div id="detail-map" class="w-full h-48 rounded-xl bg-stone-100 z-0 border border-stone-200"></div>
-                    <button id="btn-navigate" onclick="navigate()" class="w-full mt-2 bg-stone-50 text-black py-2 rounded-lg text-sm font-bold border border-orange-100 flex items-center justify-center hover:bg-orange-50">
+                    <button id="btn-navigate" onclick="navigate()" class="w-full mt-2 bg-amber-50 text-amber-700 py-2 rounded-lg text-sm font-bold border border-amber-200 flex items-center justify-center hover:bg-amber-100 transition">
                         <i class="fa-solid fa-diamond-turn-right mr-2"></i> นำทางด้วย Google Maps
                     </button>
                 </div>
 
                 <!-- Combined Rating & Comment Section -->
-                <div class="border-t border-dashed border-stone-200 pt-6">
-                    <h3 class="font-bold text-center mb-2 text-black">อนุโมทนาบุญ & ให้คะแนน</h3>
+                <div class="border-t border-dashed border-amber-200 pt-6">
+                    <h3 class="font-bold text-center mb-2 text-amber-900">ร่วมอนุโมทนาบุญ / ให้คะแนน</h3>
                     <div class="flex justify-center space-x-3 mb-4" id="rating-stars"></div>
-                    <div class="flex space-x-2 mb-4 bg-stone-50 p-2 rounded-2xl border border-orange-100">
-                        <input type="text" id="comment-input" class="flex-1 bg-transparent border-none px-2 text-sm outline-none text-black placeholder-gray-500" placeholder="ร่วมอนุโมทนา หรือ เขียนรีวิว...">
-                        <button id="btn-send-review" onclick="submitReview()" class="bg-orange-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md active:scale-95 transition hover:bg-orange-700">
+                    <div class="flex space-x-2 mb-4 bg-amber-50 p-2 rounded-2xl border border-amber-100">
+                        <input type="text" id="comment-input" class="flex-1 bg-transparent border-none px-2 text-sm outline-none text-stone-800 placeholder-stone-400" placeholder="พิมพ์คำอวยพร / สาธุ / สอบถาม...">
+                        <button id="btn-send-review" onclick="submitReview()" class="bg-amber-500 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md active:scale-95 transition hover:bg-amber-600">
                             <i class="fa-solid fa-paper-plane text-xs"></i>
                         </button>
                     </div>
                 </div>
 
                 <div>
-                    <h3 class="font-bold mb-3 flex justify-between items-center text-black">สาธุชนที่มาร่วมงานล่าสุด</h3>
+                    <h3 class="font-bold mb-3 flex justify-between items-center text-amber-900">สาธุชนที่มาร่วมงานล่าสุด</h3>
                     <div id="comment-list" class="space-y-4"></div>
                 </div>
             </div>
@@ -272,11 +282,11 @@
         <div id="modal-favorites" class="fixed inset-0 z-[100] hidden">
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="closeFavorites()"></div>
             <div class="absolute bottom-0 w-full bg-white rounded-t-[30px] h-[80vh] flex flex-col animate-slide-up shadow-2xl">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-black flex items-center">
+                <div class="p-6 border-b border-stone-100 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-amber-900 flex items-center">
                         <i class="fa-solid fa-heart text-red-500 mr-2"></i> รายการโปรด
                     </h2>
-                    <button onclick="closeFavorites()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+                    <button onclick="closeFavorites()" class="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-200">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -289,13 +299,13 @@
     </main>
 
     <!-- BOTTOM NAV -->
-    <nav class="fixed bottom-0 w-full glass-nav pb-safe z-50 h-[80px] bg-white border-t border-stone-100">
+    <nav class="fixed bottom-0 w-full glass-nav pb-safe z-50 h-[80px]">
         <div class="grid grid-cols-2 h-16 max-w-md mx-auto">
-            <button onclick="switchTab('home')" class="nav-btn active flex flex-col items-center justify-center text-gray-400 hover:text-black transition-colors" data-page="home">
+            <button onclick="switchTab('home')" class="nav-btn active flex flex-col items-center justify-center text-stone-400 hover:text-amber-600 transition" data-page="home">
                 <i class="fa-solid fa-vihara text-xl mb-1"></i> <span class="text-[10px] font-medium">หน้าหลัก</span>
             </button>
-            <button onclick="switchTab('add-cafe')" class="nav-btn flex flex-col items-center justify-center text-gray-400 hover:text-black relative transition-colors" data-page="add-cafe">
-                <div class="absolute -top-5 bg-gradient-to-tr from-orange-500 to-orange-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+            <button onclick="switchTab('add-cafe')" class="nav-btn flex flex-col items-center justify-center text-stone-400 hover:text-amber-600 relative transition" data-page="add-cafe">
+                <div class="absolute -top-5 bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-4 border-white transition transform hover:scale-105">
                     <i class="fa-solid fa-plus text-xl"></i>
                 </div>
                 <span class="text-[10px] font-medium mt-6">บอกบุญ</span>
@@ -339,8 +349,8 @@
                 btn.addEventListener('click', () => {
                     document.getElementById('page-detail').classList.add('hidden');
                     const page = btn.dataset.page;
-                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('text-orange-600', 'active'));
-                    btn.classList.add('text-orange-600');
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('text-amber-600', 'active'));
+                    btn.classList.add('text-amber-600');
                     if(page === 'home') document.getElementById('page-add-cafe').classList.add('hidden');
                     else {
                         document.getElementById('page-home').classList.add('hidden');
@@ -394,7 +404,7 @@
                 document.getElementById('lat').value = lat;
                 document.getElementById('lng').value = lng;
                 document.getElementById('location-status').innerText = `✅ ปักหมุดแล้ว (${lat}, ${lng})`;
-                document.getElementById('location-status').classList.remove('text-black');
+                document.getElementById('location-status').classList.remove('text-amber-600');
                 document.getElementById('location-status').classList.add('text-green-600', 'font-bold');
             });
         }
@@ -418,7 +428,7 @@
                     document.getElementById('lat').value = lat.toFixed(6);
                     document.getElementById('lng').value = lon.toFixed(6);
                     document.getElementById('location-status').innerText = `✅ พบ: ${data[0].display_name.split(',')[0]}`;
-                    document.getElementById('location-status').classList.remove('text-black');
+                    document.getElementById('location-status').classList.remove('text-amber-600');
                     document.getElementById('location-status').classList.add('text-green-600');
                 } else { showToast("ไม่พบสถานที่"); }
             } catch (e) { showToast("การค้นหาผิดพลาด"); } finally { icon.className = originalClass; }
@@ -462,7 +472,7 @@
             if(exists) {
                 btn.innerHTML = '<i class="fa-solid fa-heart text-red-500 text-xl animate-bounce"></i>';
             } else {
-                btn.innerHTML = '<i class="fa-regular fa-heart text-gray-400 text-xl"></i>';
+                btn.innerHTML = '<i class="fa-regular fa-heart text-stone-400 text-xl"></i>';
             }
             return exists;
         }
@@ -515,7 +525,7 @@
             
             if(favs.length === 0) {
                 list.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-gray-400">
+                    <div class="flex flex-col items-center justify-center h-64 text-stone-400">
                         <i class="fa-regular fa-heart text-4xl mb-3"></i>
                         <p>ยังไม่มีรายการโปรด</p>
                     </div>
@@ -524,16 +534,16 @@
             }
 
             list.innerHTML = favs.map(f => `
-                <div onclick="closeFavorites(); openDetail('${f.id}')" class="flex items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100 active:scale-95 transition cursor-pointer">
-                    <div class="w-16 h-16 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
+                <div onclick="closeFavorites(); openDetail('${f.id}')" class="flex items-center bg-white p-3 rounded-xl shadow-sm border border-stone-100 active:scale-95 transition cursor-pointer">
+                    <div class="w-16 h-16 rounded-lg bg-stone-200 overflow-hidden flex-shrink-0">
                         <img src="${f.image}" class="w-full h-full object-cover">
                     </div>
                     <div class="ml-3 flex-1 min-w-0">
-                        <h4 class="font-bold text-black truncate">${f.name}</h4>
-                        <p class="text-xs text-gray-500"><i class="fa-solid fa-map-pin"></i> ${f.province}</p>
-                        ${f.date ? `<p class="text-[10px] text-orange-600 mt-1">📅 ${new Date(f.date).toLocaleDateString('th-TH')}</p>` : ''}
+                        <h4 class="font-bold text-stone-800 truncate">${f.name}</h4>
+                        <p class="text-xs text-stone-500"><i class="fa-solid fa-map-pin"></i> ${f.province}</p>
+                        ${f.date ? `<p class="text-[10px] text-amber-600 mt-1">📅 ${new Date(f.date).toLocaleDateString('th-TH')}</p>` : ''}
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                    <i class="fa-solid fa-chevron-right text-stone-300 text-xs"></i>
                 </div>
             `).join('');
         }
@@ -582,7 +592,7 @@
                         document.getElementById(`icon${i}`).classList.remove('hidden');
                     });
                     document.getElementById('location-status').innerText = '👆 จิ้มบนแผนที่เพื่อระบุพิกัด';
-                    document.getElementById('location-status').className = 'text-xs text-center text-black';
+                    document.getElementById('location-status').className = 'text-xs text-center text-amber-600';
                     switchTab('home');
                     loadCafes();
                 } else { showToast("บันทึกไม่สำเร็จ"); }
@@ -618,19 +628,29 @@
             // Reset UI
             document.getElementById('detail-gallery').innerHTML = '';
             document.getElementById('btn-delete-cafe').classList.add('hidden');
-            document.getElementById('btn-fav-toggle').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-gray-400"></i>';
+            document.getElementById('btn-fav-toggle').innerHTML = 
+                '<i class="fa-solid fa-spinner fa-spin text-stone-400"></i>';
 
-            // Find in cache first
             const cachedData = cachedCafes.find(c => c.cafe_id === id);
             if (cachedData) {
                 renderDetail(cachedData, null); 
             }
 
             try {
-                const res = await fetch(`${API_URL}?action=get_details&cafe_id=${id}`);
+                // ✅ ใช้ URL เดิมตามที่แก้ไปล่าสุด
+                const res = await fetch(`${API_URL}?cafe_id=${id}`);
                 const data = await res.json();
-                renderDetail(data.cafe, data.comments);
-            } catch(e) { console.error(e); }
+
+                if (!data || !data.cafe) {
+                    showToast("โหลดรายละเอียดไม่สำเร็จ");
+                    return;
+                }
+
+                renderDetail(data.cafe, data.comments || []);
+            } catch(e) { 
+                console.error(e); 
+                showToast("โหลดข้อมูลผิดพลาด");
+            }
         }
         
         function renderDetail(cafe, comments) {
@@ -657,7 +677,7 @@
             
             document.getElementById('detail-img-main').src = mainImage; 
             document.getElementById('detail-rating').innerText = cafe.avg_rating;
-            document.getElementById('detail-location-text').innerHTML = `<i class="fa-solid fa-location-dot mr-2 text-black"></i> ${cafe.district}, ${cafe.province}`;
+            document.getElementById('detail-location-text').innerHTML = `<i class="fa-solid fa-map-pin mr-2 text-amber-500"></i> ${cafe.district}, ${cafe.province}`;
             document.getElementById('detail-desc').innerText = cleanDesc;
             
             const dateEl = document.getElementById('detail-date');
@@ -681,21 +701,21 @@
             setTimeout(() => initDetailMap(cafe.lat, cafe.lng, cafe.name), 200);
 
             if (comments === null) {
-                document.getElementById('comment-list').innerHTML = '<div class="text-center py-10 text-orange-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลด...</div>';
-            } else if (comments.length > 0) {
+                document.getElementById('comment-list').innerHTML = '<div class="text-center py-10 text-amber-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลด...</div>';
+            } else if (comments && comments.length > 0) {
                 document.getElementById('comment-list').innerHTML = comments.map(c => `
-                    <div class="bg-orange-50 p-3 rounded-xl relative border border-orange-100">
+                    <div class="bg-amber-50 p-3 rounded-xl relative border border-amber-100">
                          <div class="flex items-center mb-1 justify-between">
-                            <span class="text-xs font-bold text-black">ผู้ใช้งาน</span>
+                            <span class="text-xs font-bold text-amber-900">กัลยาณมิตร</span>
                             ${(String(c.user_key).trim() === String(userKey).trim() || isOwner) ? 
                                 `<button onclick="deleteComment('${c.comment_id}')" class="text-red-400 text-xs hover:text-red-600 p-1"><i class="fa-solid fa-trash"></i></button>` 
                                 : ''}
                         </div>
-                        <p class="text-sm text-black">${c.comment}</p>
+                        <p class="text-sm text-stone-800">${c.comment}</p>
                     </div>
                 `).join('');
             } else {
-                document.getElementById('comment-list').innerHTML = '<p class="text-center text-gray-400 text-sm py-4">ยังไม่มีความคิดเห็น</p>';
+                document.getElementById('comment-list').innerHTML = '<p class="text-center text-stone-400 text-sm py-4">ยังไม่มีความคิดเห็น</p>';
             }
             
             renderRatingStars(); 
@@ -716,8 +736,8 @@
                 text: "ข้อมูลจะถูกลบถาวร!",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444', 
-                cancelButtonColor: '#ea580c',
+                confirmButtonColor: '#d97706', 
+                cancelButtonColor: '#78716c',
                 confirmButtonText: 'ลบเลย',
                 cancelButtonText: 'ยกเลิก'
             });
@@ -759,8 +779,8 @@
                 title: 'ลบความคิดเห็น?',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#ea580c',
+                confirmButtonColor: '#d97706',
+                cancelButtonColor: '#78716c',
                 confirmButtonText: 'ลบ',
                 cancelButtonText: 'ยกเลิก'
             });
@@ -860,7 +880,7 @@
             const list = document.getElementById('cafe-list');
             list.innerHTML = `
                 <div class="flex flex-col items-center py-10">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-800"></div>
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
                 </div>`;
             
             const filterProvince = document.getElementById('filter-province').value;
@@ -870,7 +890,7 @@
             try {
                 let data = [];
                 if(cachedCafes.length === 0) {
-                    const res = await fetch(`${API_URL}?action=list`);
+                    const res = await fetch(API_URL);
                     data = await res.json();
                     cachedCafes = data;
                 } else {
@@ -898,28 +918,28 @@
 
             function renderList(items) {
                 if (!items || items.length === 0) {
-                    list.innerHTML = `<div class="text-center py-10 text-gray-400">ไม่พบข้อมูลงานบุญ</div>`;
+                    list.innerHTML = `<div class="text-center py-10 text-stone-400">ไม่พบข้อมูลงานบุญ</div>`;
                     return;
                 }
 
                 list.innerHTML = items.map(c => {
                     const cover = c.image1 || c.image2 || c.image3 || '';
                     return `
-                <div onclick="openDetail('${c.cafe_id}')" class="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+                <div onclick="openDetail('${c.cafe_id}')" class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
                     <div class="relative h-48">
                     <img src="${cover}" class="w-full h-full object-cover">
-                    <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold flex items-center text-black">
-                        <i class="fa-solid fa-star text-gold mr-1"></i> ${c.avg_rating}
+                    <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold flex items-center text-amber-800">
+                        <i class="fa-solid fa-heart text-red-500 mr-1"></i> ${c.avg_rating}
                     </div>
                     ${getEventDate(c.description) ? 
-                        `<div class="absolute bottom-3 left-3 bg-orange-600 text-white px-2 py-1 rounded text-xs font-bold shadow-md">
+                        `<div class="absolute bottom-3 left-3 bg-amber-500 text-white px-2 py-1 rounded text-xs font-bold shadow-md">
                            📅 ${new Date(getEventDate(c.description)).toLocaleDateString('th-TH', {day:'numeric', month:'short'})}
                          </div>` : ''}
                     </div>
                     <div class="p-4">
-                    <h3 class="font-bold text-lg text-black mb-1 leading-tight">${c.name}</h3>
-                    <span class="text-xs text-black flex items-center">
-                        <i class="fa-solid fa-location-dot mr-1.5 text-black"></i>
+                    <h3 class="font-bold text-lg text-amber-900 mb-1 leading-tight">${c.name}</h3>
+                    <span class="text-xs text-stone-500 flex items-center">
+                        <i class="fa-solid fa-map-pin mr-1.5 text-amber-400"></i>
                         ${c.province}
                     </span>
                     </div>
@@ -930,13 +950,13 @@
 
         async function loadTopCafes() { 
              const container = document.getElementById('top-section');
-             container.innerHTML = '<div class="text-black text-sm w-full text-center">กำลังโหลด...</div>';
+             container.innerHTML = '<div class="text-stone-400 text-sm w-full text-center">กำลังโหลด...</div>';
 
              try {
                 let allData = [];
                 if (cachedCafes.length > 0) allData = cachedCafes;
                 else {
-                    const res = await fetch(`${API_URL}?action=list`);
+                    const res = await fetch(API_URL);
                     allData = await res.json();
                 }
 
@@ -956,18 +976,18 @@
                     const cover = c.image1 || c.image2 || c.image3 || '';
                     return `
                 <div onclick="openDetail('${c.cafe_id}')" class="snap-center shrink-0 w-36 cursor-pointer">
-                    <div class="relative rounded-xl overflow-hidden shadow-sm h-44 mb-2">
+                    <div class="relative rounded-xl overflow-hidden shadow-sm h-44 mb-2 border border-stone-100">
                     <img src="${cover}" class="w-full h-full object-cover">
                     ${getEventDate(c.description) ? 
-                        `<div class="absolute bottom-0 w-full bg-black/60 text-white text-[10px] px-2 py-1 text-center backdrop-blur-sm">
+                        `<div class="absolute bottom-0 w-full bg-amber-900/80 text-white text-[10px] px-2 py-1 text-center backdrop-blur-sm">
                            ${new Date(getEventDate(c.description)).toLocaleDateString('th-TH', {day:'numeric', month:'short'})}
                          </div>` : ''}
                     </div>
-                    <h3 class="font-bold text-black text-sm truncate px-1">${c.name}</h3>
+                    <h3 class="font-bold text-amber-900 text-sm truncate px-1">${c.name}</h3>
                 </div>
                 `}).join('');
              } catch(e) {
-                container.innerHTML = `<div class="text-gray-400 text-sm">โหลดไม่สำเร็จ</div>`;
+                container.innerHTML = `<div class="text-stone-400 text-sm">โหลดไม่สำเร็จ</div>`;
              }
         }
         function navigate() { window.open(`https://www.google.com/maps/dir/?api=1&destination=${document.getElementById('lat').value || 13.7563},${document.getElementById('lng').value || 100.5018}`, '_blank'); }
